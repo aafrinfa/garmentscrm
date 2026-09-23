@@ -48,9 +48,9 @@
 
                 <tr
                     v-for="customer in customers"
-                    :key="customer.customerid"
+                    :key="customer.id"
                 >
-                    <td>{{ customer.customerid }}</td>
+                    <td>{{ customer.id }}</td>
                     <td>{{ customer.name }}</td>
                     <td>{{ customer.phone }}</td>
                 </tr>
