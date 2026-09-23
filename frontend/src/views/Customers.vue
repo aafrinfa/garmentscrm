@@ -1,45 +1,40 @@
 <template>
-    <div>
+    <v-app>
         <Navbar />
+        <v-main>
+            <v-container>
 
         <h1>Customers</h1>
 
         <!-- Add Customer Form -->
 
-        <form @submit.prevent="addCustomer">
+        <v-form @submit.prevent="addCustomer">
+            
+            <v-text-field
+                v-model="name"
+                label="Name"
+                required
+            />
 
-            <div>
-                <label>Name</label>
+            <v-text-field
+                v-model="phone"
+                label="Phone"
+                required
+            />
 
-                <input
-                    type="text"
-                    v-model="name"
-                    required
-                />
-            </div>
-
-            <div>
-                <label>Phone</label>
-
-                <input
-                    type="text"
-                    v-model="phone"
-                    required
-                />
-            </div>
-
-            <button type="submit">
+            <v-btn type="submit" color="primary">
                 Add Customer
-            </button>
+            </v-btn>
 
-        </form>
+        </v-form>
+
 
 
         <!-- Customer List -->
 
         <h2>Customers List</h2>
 
-        <table>
+        <v-table>
 
             <thead>
                 <tr>
@@ -62,18 +57,19 @@
 
             </tbody>
 
-        </table>
+        </v-table>
+        
+            </v-container>
+        </v-main>
 
-    </div>
+    </v-app>
 </template>
 
 
 <script setup>
 
 import { ref, onMounted } from "vue";
-
 import Navbar from "../components/Navbar.vue";
-
 import {
     getCustomers,
     createCustomer
@@ -87,49 +83,32 @@ const customers = ref([]);
 
 
 const loadCustomers = async () => {
-
     try {
-
         customers.value = await getCustomers();
-
     } catch (error) {
-
         console.error("Failed to load customers", error);
-
     }
-
 };
 
 
 const addCustomer = async () => {
-
     try {
-
         const newCustomer = {
             name: name.value,
             phone: phone.value
         };
-
         const customer = await createCustomer(newCustomer);
-
         customers.value.push(customer);
-
         name.value = "";
         phone.value = "";
-
     } catch (error) {
-
         console.error("Failed to create customer", error);
-
     }
-
 };
 
 
 onMounted(() => {
-
     loadCustomers();
-
 });
 
 </script>

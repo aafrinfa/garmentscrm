@@ -1,11 +1,15 @@
 <template>
-    <nav>
-        <router-link to="/">Home</router-link>
+    <v-toolbar color="primary">
+    <v-toolbar-title>My CRM</v-toolbar-title>
+    <v-toolbar-items>
+        <v-btn text to="/">Home</v-btn>
+        
         <br>
-        <router-link to="/customers">Customers</router-link>
+        <v-btn text to="/customers">Customers</v-btn>
         <br>
-        <router-link to="/invoices">Invoices</router-link>
+        <v-btn text to="/invoices">Invoices</v-btn>
         <br>
-        <router-link to="/payments">Payments</router-link>
-    </nav>
+        <v-btn text to="/payments">Payments</v-btn>
+    </v-toolbar-items>
+    </v-toolbar>
 </template>
