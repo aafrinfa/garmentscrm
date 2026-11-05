@@ -5,9 +5,8 @@ const Invoice = sequelize.define(
     "Invoice",
     {
         invoiceid: {
-            type: DataTypes.INTEGER,
-            primaryKey: true,
-            autoIncrement: true
+            type: DataTypes.STRING,
+            primaryKey: true
         },
 
         amount: {
@@ -16,17 +15,21 @@ const Invoice = sequelize.define(
         },
 
         dateofissue: {
-            type: DataTypes.DATE,
-            allowNull: false
-        },
-
-        duration: {
-            type: DataTypes.INTEGER,
+            type: DataTypes.DATEONLY,
             allowNull: false
         },
 
         customerid: {
             type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+                model: "customers",
+                key: "customerid"
+            }
+        },
+
+        duedate:{
+            type: DataTypes.DATEONLY,
             allowNull: false
         },
 

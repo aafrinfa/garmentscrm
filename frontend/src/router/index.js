@@ -4,6 +4,7 @@ import Home from "../views/Home.vue";
 import Customers from "../views/Customers.vue";
 import Invoices from "../views/Invoices.vue";
 import Payments from "../views/Payments.vue";
+import CustomerDetails from "../views/CustomerDetails.vue";
 
 const router = createRouter({
     history: createWebHistory(),
@@ -16,6 +17,10 @@ const router = createRouter({
         {
             path: "/customers",
             component: Customers
+        },
+        {
+            path: "/customers/:customerid",
+            component: CustomerDetails
         },
         {
             path: "/invoices",

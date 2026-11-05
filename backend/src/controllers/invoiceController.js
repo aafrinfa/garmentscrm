@@ -3,10 +3,13 @@ const Customer = require("../models/customer");
 
 const getInvoices = async (req, res) => {
     try {
-        const invoices = await Invoice.findAll();
+        const invoices = await Invoice.findAll({
+            order: [["dateofissue", "ASC"]]
+        });
 
         res.json(invoices);
     } catch (error) {
+        console.error("Failed to fetch invoices:", error);
         res.status(500).json({
             message: "Failed to fetch invoices"
         });
@@ -15,23 +18,47 @@ const getInvoices = async (req, res) => {
 
 const createInvoice = async (req, res) => {
     try {
-        const { amount, dateofissue, duration, customerid } = req.body;
-        // 1. Find customer
+        const { invoiceid, amount, dateofissue, customerid } = req.body;
+        const invoiceAmount = Number(amount);
+        const issueDate = new Date(dateofissue);
+        if (
+            !invoiceid ||
+            !Number.isFinite(invoiceAmount) ||
+            invoiceAmount <= 0 ||
+            !dateofissue ||
+            Number.isNaN(issueDate.getTime()) ||
+            !Number.isInteger(Number(customerid))
+        ) {
+            return res.status(400).json({
+                message: "Valid invoice ID, amount, issue date and customer ID are required"
+            });
+        }
+        
         const customer = await Customer.findByPk(customerid);
-
-        // 2. If customer doesn't exist
         if (!customer) {
             return res.status(404).json({
                 message: "Customer not found"
             });
         }
-        // 3. Create invoice
+
+        const duration = Number(customer.duration);
+
+        if (!Number.isInteger(duration) || duration < 0) {
+            return res.status(400).json({
+                message: "Customer duration must be a non-negative number of days"
+            });
+        }
+        const duedate = new Date(dateofissue);
+        duedate.setDate(duedate.getDate() + duration);
+
+        
         const invoice = await Invoice.create({
-            amount,
-            dateofissue,
-            duration,
-            customerid,
-            remainingamount: amount,
+            invoiceid, 
+            amount: invoiceAmount,
+            dateofissue: issueDate,
+            customerid: customer.customerid,
+            duedate,
+            remainingamount: invoiceAmount,
             status: "pending"
         });
 

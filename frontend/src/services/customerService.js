@@ -11,3 +11,10 @@ export const createCustomer = async (customer) => {
     const response = await axios.post(API_URL, customer);
     return response.data;
 };
+
+export const getCustomerDetails = async (customerid) => {
+    const response = await axios.get(
+        `${API_URL}/${customerid}/details`
+    );
+    return response.data;
+};

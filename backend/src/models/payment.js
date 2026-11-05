@@ -16,18 +16,17 @@ const Payment = sequelize.define(
         },
 
         date: {
-            type: DataTypes.DATE,
+            type: DataTypes.DATEONLY,
             allowNull: false
         },
 
         customerid: {
             type: DataTypes.INTEGER,
-            allowNull: false
-        },
-
-        invoiceid: {
-            type: DataTypes.INTEGER,
-            allowNull: false
+            allowNull: false,
+            references: {
+                model: "customers",
+                key: "customerid"
+            }
         }
     },
     {

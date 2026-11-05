@@ -4,7 +4,7 @@ const sequelize = require("../config/database");
 const Customer = sequelize.define(
     "Customer",
     {
-        id: {
+        customerid: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true
@@ -18,7 +18,13 @@ const Customer = sequelize.define(
         phone: {
             type: DataTypes.STRING,
             allowNull: false
+        },
+
+        duration: {
+            type: DataTypes.INTEGER,
+            allowNull: false
         }
+
     },
     {
         tableName: "customers",

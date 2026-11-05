@@ -1,5 +1,13 @@
-const Invoice = require("../models/invoice");
-const Payment = require("../models/payment");
+const sequelize = require("../config/database");
+
+const {
+    Customer,
+    Invoice,
+    Payment,
+    PaymentAllocation
+} = require("../models/associations");
+
+const { Op } = require("sequelize");
 
 const getPayments = async (req, res) => {
     try {
@@ -14,48 +22,128 @@ const getPayments = async (req, res) => {
 };
 
 const createPayment = async (req, res) => {
+    let transaction;
+
     try {
-        const { amount, date, customerid, invoiceid } = req.body;
-        // 1. Find Invoice
-        const invoice = await Invoice.findByPk(invoiceid);
+        transaction = await sequelize.transaction();
+        const { amount, date, customerid } = req.body;
 
-        // 2. If invoice doesn't exist
-        if (!invoice) {
-            return res.status(404).json({
-                message: "Invoice not found"
-            });
-        }
-        
-        // 3. Check payment doesn't exceed remaining amount
-        if (Number(amount) > Number(invoice.remainingamount)) {
+        const paymentAmount = Number(amount);
+
+        if (
+            !Number.isFinite(paymentAmount) ||
+            paymentAmount <= 0 ||
+            !Number.isInteger(Number(customerid))
+        ) {
+            await transaction.rollback();
+
             return res.status(400).json({
-                message: "Payment amount exceeds remaining invoice amount"
+                message: "Valid customer ID and positive payment amount are required"
             });
         }
 
-
-        // 4. Subtract payment amount from remaining amount
-        invoice.remainingamount = Number(invoice.remainingamount) - Number(amount)  ;
-
-        // 5. If remaining amount is 0, mark invoice as done
-        if (Number(invoice.remainingamount) === 0) {
-            invoice.status = "done";
-        }
-        // 6. Save updated invoice
-        await invoice.save();
-
-        
-        // 7. Create payment
-        const payment = await Payment.create({
-            amount,
-            date,
-            customerid,
-            invoiceid
+        // 1. Verify the customer exists.
+        const customer = await Customer.findByPk(customerid, {
+            transaction
         });
 
-        res.status(201).json(payment);
+        if (!customer) {
+            await transaction.rollback();
+
+            return res.status(404).json({
+                message: "Customer not found"
+            });
+        }
+
+        // 2. Fetch all outstanding invoices, oldest first.
+        const invoices = await Invoice.findAll({
+            where: {
+                customerid,
+                remainingamount: {
+                    [Op.gt]: 0
+                }
+            },
+            order: [
+                ["dateofissue", "ASC"],
+                ["invoiceid", "ASC"]
+            ],
+            transaction,
+            lock: transaction.LOCK.UPDATE
+        });
+
+        // 3. Record the payment once.
+        const payment = await Payment.create({
+            amount: paymentAmount,
+            date: date || new Date(),
+            customerid
+        }, {
+            transaction
+        });
+
+        let remainingPayment = Math.round(paymentAmount * 100) / 100;
+        const allocations = [];
+
+        // 4. Apply the payment to the oldest invoice first.
+        for (const invoice of invoices) {
+            if (remainingPayment <= 0) break;
+
+            const outstanding =
+                Math.round(Number(invoice.remainingamount) * 100) / 100;
+
+            const allocatedAmount = Math.min(
+                remainingPayment,
+                outstanding
+            );
+
+            const newRemaining = Math.round(
+                (outstanding - allocatedAmount) * 100
+            ) / 100;
+
+            invoice.remainingamount = newRemaining;
+
+            if (newRemaining === 0) {
+                invoice.status = "done";
+            }
+
+            await invoice.save({ transaction });
+
+            allocations.push({
+                paymentid: payment.paymentid,
+                invoiceid: invoice.invoiceid,
+                amount: allocatedAmount
+            });
+
+            remainingPayment = Math.round(
+                (remainingPayment - allocatedAmount) * 100
+            ) / 100;
+        }
+
+        // 5. Save the invoice-level allocation history.
+        if (allocations.length > 0) {
+            await PaymentAllocation.bulkCreate(allocations, {
+                transaction
+            });
+        }
+
+
+        await transaction.commit();
+
+        return res.status(201).json({
+            message: remainingPayment > 0
+            ? "Payment recorded; some amount remains unallocated"
+            : "Payment recorded and allocated successfully",
+            payment,
+            allocations,
+            unallocatedamount: remainingPayment
+        });
     } catch (error) {
-        res.status(500).json({
+        if (transaction && !transaction.finished) {
+            await transaction.rollback();
+        }
+
+        console.error("Payment creation failed:", error);
+
+        return res.status(500).json({
             message: "Failed to create payment"
         });
     }
